@@ -2,8 +2,7 @@ package main
 
 import "errors"
 
-// TODO: type brace byte
-// TODO: better names for stuff (brace -> depth, r -> c)
+// TODO: Handle properly unmatched braces
 // TODO: put type of brace into tree
 
 var (
@@ -13,26 +12,26 @@ var (
 
 var errNotBracket = errors.New("Not a bracket")
 
-func isByte(r byte, lr []byte) bool {
-	for i := range lr {
-		if r == lr[i] {
+func isByte(c byte, cs []byte) bool {
+	for i := range cs {
+		if c == cs[i] {
 			return true
 		}
 	}
 	return false
 }
 
-func isOpen(r byte) bool {
-	return isByte(r, openBrackets)
+func isOpen(c byte) bool {
+	return isByte(c, openBrackets)
 }
 
-func isClose(r byte) bool {
-	return isByte(r, closeBrackets)
+func isClose(c byte) bool {
+	return isByte(c, closeBrackets)
 }
 
-func oppositeBrace(r byte) (byte, error) {
+func oppositeBrace(c byte) (byte, error) {
 	for i := range openBrackets {
-		if r == openBrackets[i] {
+		if c == openBrackets[i] {
 			return closeBrackets[i], nil
 		}
 	}
@@ -46,22 +45,22 @@ func isSpace(c byte) bool {
 	return false
 }
 
-type brace struct {
+type group struct {
 	current *list
-	c       byte
+	brace   byte
 }
 
 type parser struct {
 	pos     int
 	str     string
-	braces  []brace
+	groups  []group
 	current *list
 }
 
 func newParser(s string) *parser {
 	return &parser{
 		str:     s,
-		braces:  make([]brace, 0),
+		groups:  make([]group, 0),
 		current: newList(),
 	}
 }
@@ -91,12 +90,11 @@ func (p *parser) nextWord() (end int, err error) {
 	end = p.pos
 	p.skipSpaces()
 	if isClose(p.str[p.pos]) || p.end() {
-		return p.pos, nil
+		return end, nil
 	}
 	if p.str[p.pos] != ',' {
 		return 0, errors.New("unexpected character, want comma")
 	}
-	p.pos++
 	return end, nil
 }
 
@@ -113,22 +111,22 @@ func (p *parser) parse() error {
 				return err
 			}
 			p.pos++
-			p.braces = append(p.braces, brace{p.current, cb})
+			p.groups = append(p.groups, group{p.current, cb})
 			p.current = newList()
 			continue
 		}
 		if isClose(p.str[p.pos]) {
-			if len(p.braces) == 0 {
+			if len(p.groups) == 0 {
 				return errors.New("unmatched closed bracket")
 			}
 			cur := p.current
-			if len(p.braces) > 0 {
-				p.current = p.braces[len(p.braces)-1].current
+			if len(p.groups) > 0 {
+				p.current = p.groups[len(p.groups)-1].current
 				p.current.add(cur)
 			}
-			var b brace
-			b, p.braces = p.braces[len(p.braces)-1], p.braces[:len(p.braces)-1]
-			if b.c != p.str[p.pos] {
+			var g group
+			g, p.groups = p.groups[len(p.groups)-1], p.groups[:len(p.groups)-1]
+			if g.brace != p.str[p.pos] {
 				return errors.New("unexpected matching bracket")
 			}
 			p.pos++
@@ -138,6 +136,9 @@ func (p *parser) parse() error {
 		end, err := p.nextWord()
 		if err != nil {
 			return err
+		}
+		if begin == end {
+			continue
 		}
 		p.current.add(newText(p.str[begin:end]))
 	}

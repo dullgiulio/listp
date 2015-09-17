@@ -7,20 +7,6 @@ type entry interface {
 	Children() []entry
 }
 
-func printEntries(e entry, tabs int) {
-	for i := 0; i < tabs; i++ {
-		fmt.Print("\t")
-	}
-	fmt.Printf("%s\n", e.String())
-	children := e.Children()
-	if children != nil {
-		for i := range children {
-			printEntries(children[i], tabs+1)
-		}
-	}
-	fmt.Print("\n")
-}
-
 type text string
 
 func newText(s string) *text {
