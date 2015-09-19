@@ -2,7 +2,6 @@ package main
 
 import "errors"
 
-// TODO: Handle properly unmatched braces
 // TODO: put type of brace into tree
 
 var (
@@ -10,7 +9,12 @@ var (
 	closeBrackets = []byte{')', ']', '}'}
 )
 
-var errNotBracket = errors.New("Not a bracket")
+var (
+	errNotBracket     = errors.New("not a bracket")
+	errExpectComma    = errors.New("unexpected character, want comma")
+	errUnmatchedClose = errors.New("unmatched close bracket")
+	errUnmatchedOpen  = errors.New("unmatched open bracket")
+)
 
 func isByte(c byte, cs []byte) bool {
 	for i := range cs {
@@ -89,11 +93,11 @@ func (p *parser) nextWord() (end int, err error) {
 	}
 	end = p.pos
 	p.skipSpaces()
-	if isClose(p.str[p.pos]) || p.end() {
+	if p.end() || isClose(p.str[p.pos]) {
 		return end, nil
 	}
 	if p.str[p.pos] != ',' {
-		return 0, errors.New("unexpected character, want comma")
+		return 0, errExpectComma
 	}
 	return end, nil
 }
@@ -117,7 +121,7 @@ func (p *parser) parse() error {
 		}
 		if isClose(p.str[p.pos]) {
 			if len(p.groups) == 0 {
-				return errors.New("unmatched closed bracket")
+				return errUnmatchedClose
 			}
 			cur := p.current
 			if len(p.groups) > 0 {
@@ -127,7 +131,9 @@ func (p *parser) parse() error {
 			var g group
 			g, p.groups = p.groups[len(p.groups)-1], p.groups[:len(p.groups)-1]
 			if g.brace != p.str[p.pos] {
-				return errors.New("unexpected matching bracket")
+				// XXX: Error here is more specific: there is a closing bracket, but
+				//      it is not matching (like: "(...}")
+				return errUnmatchedClose
 			}
 			p.pos++
 			continue
@@ -141,6 +147,9 @@ func (p *parser) parse() error {
 			continue
 		}
 		p.current.add(newText(p.str[begin:end]))
+	}
+	if len(p.groups) > 0 {
+		return errUnmatchedOpen
 	}
 	return nil
 }
