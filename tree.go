@@ -24,6 +24,7 @@ func (t *text) Children() []entry {
 
 type list struct {
 	entries []entry
+	brace   brace
 }
 
 func newList() *list {
@@ -35,7 +36,7 @@ func (l *list) add(e entry) {
 }
 
 func (l *list) String() string {
-	return fmt.Sprintf("[list %d]", len(l.entries))
+	return fmt.Sprintf("[list %s %d]", l.brace.pair(), len(l.entries))
 }
 
 func (l *list) Children() []entry {

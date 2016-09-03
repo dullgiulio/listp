@@ -28,6 +28,7 @@ func main() {
 		{"arg1, arg2, arg3", nil},
 		{"(arg1, arg2, arg3)", nil},
 		{"()", nil},
+		{"arg1", nil},
 		{"arg1), arg2, arg3", errUnmatchedClose},
 		{"(arg1, arg2, arg3", errUnmatchedOpen},
 	}
